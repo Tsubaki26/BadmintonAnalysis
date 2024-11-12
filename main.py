@@ -13,15 +13,13 @@ from detection import Detection
 # VIDEO_PATH = "./videos/cutvirsion.mp4"
 # VIDEO_PATH = "./videos/cutversion_nopeople.mp4"
 VIDEO_PATH = "./videos/cutversion2.mp4"
-COURT_IMG_PATH = "./img//court_vertical.jpg"
+# COURT_IMG_PATH = "./img//court_vertical.jpg"
+COURT_IMG_PATH = "./img//court_vertical_black.jpg"
+
 t = time.time()
 OUTPUT_VIDEO_PATH = f"./outputs/out{t}.mp4"
 
-X_LIMIT = [311, 1588]
-Y_LIMIT = [372, 1080]
-IMG_WIDTH = 1920
-IMG_HEIGHT = 1080
-IMG_MIDDLE = 617
+
 
 COURT_WIDTH = 183 * 2
 COURT_HEIGHT = 402 * 2
@@ -33,15 +31,6 @@ COURT_XY_BEFORE_WARP = [
     [1518, 997],
     [393, 988],
 ]
-
-DEVICE = torch.device("cuda") if torch.cuda.is_available else torch.device("cpu")
-
-SAVE_VIDEO = False
-
-point_radius = 4 * 2
-output_point_radius = 2 * 2
-
-OUTPUT_INTERVAL = 15
 
 
 class MatchAnalyzer:
@@ -157,9 +146,9 @@ class MatchAnalyzer:
         """
         poslist2 = [
             [0, 0],
-            [COURT_WIDTH, 0],
-            [COURT_WIDTH, COURT_HEIGHT],
-            [0, COURT_HEIGHT],
+            [self.court_size_wh[0], 0],
+            [self.court_size_wh[0], self.court_size_wh[1]],
+            [0, self.court_size_wh[1]],
         ]
         pts1 = np.float32(poslist1)
         pts2 = np.float32(poslist2)
@@ -183,11 +172,16 @@ class MatchAnalyzer:
                 x, y, _ = pos
                 x, y = int(x[0]), int(y[0])
                 # 過去に行くほど明るくなる
-                change_color = (self.tracking_frames - i - 1) * 5
+                if len(pos_track) < len(track_size_list):
+                    point_r = track_size_list[-1]
+                    change_color = 0
+                else:
+                    point_r = track_size_list[i]
+                    change_color = (self.tracking_frames - i - 1) * 5
                 cv2.circle(
                     court_img,
                     (x, y),
-                    track_size_list[i],
+                    point_r,
                     color=(
                         0 + change_color,
                         125 + change_color,
@@ -201,6 +195,8 @@ class MatchAnalyzer:
         """
         移動の傾きを計算
         """
+        gradient_rad = 0
+        gradient_deg = 0
         now_index = tracking_frames - 1
         reflect_frames = 10
         for i in range(2):
@@ -227,8 +223,8 @@ class MatchAnalyzer:
                     gradient_rad = math.atan(float(dy) / (float(dx) + 0.0001))
                     gradient_deg = gradient_rad * 180 / math.pi
                 print("gradient_deg", gradient_deg)
-                now_x, now_y = int(pos_track[now_index][i][0]), int(
-                    pos_track[now_index][i][1] - 10
+                now_x, now_y = int(pos_track[now_index][i][0][0]), int(
+                    pos_track[now_index][i][1][0] - 10
                 )
                 cv2.putText(
                     court_img,
@@ -239,7 +235,7 @@ class MatchAnalyzer:
                     (200, 200, 200),
                     2,
                 )
-        return court_img
+        return court_img, gradient_deg
 
     def analyze_match(
         self,
@@ -310,7 +306,6 @@ class MatchAnalyzer:
                 pos_xy_perspective_transformed = self.perspective_transform_position(
                     player_foot_pos_xy_list, M
                 )
-                #! 配列の順番が逆の方がいい
                 pos_track.append(pos_xy_perspective_transformed)
                 # TRACK_FRAMESまでしか追跡しない
                 if len(pos_track) > self.tracking_frames:
@@ -322,7 +317,7 @@ class MatchAnalyzer:
             )
             # コート画像に移動の傾きを表示
             if count >= self.tracking_frames:
-                court_for_display = self.add_move_gradient(
+                court_for_display, gradient_deg = self.add_move_gradient(
                     court_for_display, pos_track, self.tracking_frames
                 )
 
