@@ -147,13 +147,6 @@ class MatchAnalyzer:
 
         return track_size_list
 
-    def set_tracking_point_parameters(
-        self, tracking_frames, point_radius, output_point_radius
-    ):
-        self.tracking_frames = tracking_frames
-        self.point_radius = point_radius
-        self.output_point_radius = output_point_radius
-
     def get_perspective_trans_matrix(self, poslist1):
         """
         射影変換行列を作成する。
@@ -221,6 +214,7 @@ class MatchAnalyzer:
         self.load_video(match_video_path)
 
         if self.is_save_video:
+            print("prepare to save video")
             self.setup_video_writer(
                 match_video_path, (self.cap_width, self.cap_height), output_path
             )
@@ -234,7 +228,7 @@ class MatchAnalyzer:
 
             # 進捗状況の表示
             if count % 100 == 0:
-                print(f"NOW: {(count/self.num_frame*100):.2f}%")
+                print(f"NOW: {(count/self.num_frame*100):.2f}%\n")
 
             ret, frame = self.cap.read()
             if not ret:
@@ -338,4 +332,6 @@ class MatchAnalyzer:
 
 if __name__ == "__main__":
     analyzer = MatchAnalyzer()
-    analyzer.analyze_match(VIDEO_PATH)
+    analyzer.analyze_match(
+        VIDEO_PATH, is_save_video=True, output_path=OUTPUT_VIDEO_PATH
+    )
