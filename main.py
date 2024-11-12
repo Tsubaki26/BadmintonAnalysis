@@ -40,7 +40,6 @@ SAVE_VIDEO = False
 
 point_radius = 4 * 2
 output_point_radius = 2 * 2
-TRACK_FRAMES = 20
 
 OUTPUT_INTERVAL = 15
 
@@ -198,6 +197,51 @@ class MatchAnalyzer:
                 )
         return court_img
 
+    def add_move_gradient(self, court_img, pos_track, tracking_frames):
+        """
+        移動の傾きを計算
+        """
+        now_index = tracking_frames - 1
+        reflect_frames = 20
+        for i in range(2):
+            dx = (
+                pos_track[now_index][i][0] - pos_track[now_index - reflect_frames][i][0]
+            )
+            #! playerの検出される順番が変わることがあるから、おかしくなる。辞書型に変えるか、順番が固定されるようにすべき
+            dy = -1 * (
+                pos_track[now_index][i][1] - pos_track[now_index - reflect_frames][i][1]
+            )
+            print(f"dx: {dx}  | dy: {dy}")
+            print("length", math.sqrt(dx**2 + dy**2))
+            if (math.sqrt(dx**2 + dy**2)) > 50:
+                if dx < 0:
+                    if dy < 0:
+                        gradient_rad = -math.pi - math.atan(
+                            float(dy) / (float(-dx) + 0.0001)
+                        )
+                    else:
+                        gradient_rad = math.pi - math.atan(
+                            float(dy) / (float(-dx) + 0.0001)
+                        )
+                    gradient_deg = gradient_rad * 180 / math.pi
+                else:
+                    gradient_rad = math.atan(float(dy) / (float(dx) + 0.0001))
+                    gradient_deg = gradient_rad * 180 / math.pi
+                print("gradient_deg", gradient_deg)
+                now_x, now_y = int(pos_track[now_index][i][0]), int(
+                    pos_track[now_index][i][1] - 10
+                )
+                cv2.putText(
+                    court_img,
+                    f"{gradient_deg:.1f}deg",
+                    (now_x - 10, now_y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (200, 200, 200),
+                    2,
+                )
+        return court_img
+
     def analyze_match(
         self,
         match_video_path,
@@ -272,17 +316,20 @@ class MatchAnalyzer:
                 if len(pos_track) > self.tracking_frames:
                     pos_track.pop(0)
 
-            """
-            コート画像に player の位置をプロット
-            """
+            # コート画像に player の位置をプロット
             court_for_display = self.plot_player_pos(
                 court_for_display, pos_track, track_size_list
             )
+            # コート画像に移動の傾きを表示
+            if count >= self.tracking_frames:
+                court_for_display = self.add_move_gradient(
+                    court_for_display, pos_track, self.tracking_frames
+                )
 
             # 動画とコート画像の合成（左上）
-            img_for_display[50 : 50 + COURT_HEIGHT, 50 : 50 + COURT_WIDTH] = (
-                court_for_display
-            )
+            img_for_display[
+                50 : 50 + self.court_size_wh[1], 50 : 50 + self.court_size_wh[0]
+            ] = court_for_display
 
             if self.is_save_video:
                 self.write_frame(img_for_display)
@@ -333,5 +380,5 @@ class MatchAnalyzer:
 if __name__ == "__main__":
     analyzer = MatchAnalyzer()
     analyzer.analyze_match(
-        VIDEO_PATH, is_save_video=True, output_path=OUTPUT_VIDEO_PATH
+        VIDEO_PATH, is_save_video=False, output_path=OUTPUT_VIDEO_PATH
     )
