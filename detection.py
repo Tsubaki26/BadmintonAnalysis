@@ -29,7 +29,8 @@ class Detection:
         player_foot_pos_xy_list = []
         # player1, player2の順で検出される(下にいる選手がplayer1)
         # このやりかたはよくないと思うから変更するかも
-        for det in results.xyxy[0].cpu().numpy():
+        y2_0 = 0
+        for i, det in enumerate(results.xyxy[0].cpu().numpy()):
             x1, y1, x2, y2, conf, cls = det
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
             label = self.model_for_detecting_player.names[int(cls)]
@@ -43,8 +44,14 @@ class Detection:
                 and (y2 < ylimit[1])
             ):
                 # playerの足元の中心座標を格納
-                player_foot_pos_xy_list.append([x1 + (x2 - x1) // 2, y2, 1])
-
+                if i == 0:
+                    y2_0 = y2
+                    player_foot_pos_xy_list.append([x1 + (x2 - x1) // 2, y2, 1])
+                elif i==1:
+                    if y2 < y2_0:
+                        player_foot_pos_xy_list.append([x1 + (x2 - x1) // 2, y2, 1])
+                    else:
+                        player_foot_pos_xy_list.insert(0, [x1 + (x2 - x1) // 2, y2, 1])
                 """
                 player の足元に表示する楕円の作成
                 ・動画と同じサイズの黒い画像を作成し、そこに楕円を描画。
