@@ -202,18 +202,17 @@ class MatchAnalyzer:
         移動の傾きを計算
         """
         now_index = tracking_frames - 1
-        reflect_frames = 20
+        reflect_frames = 10
         for i in range(2):
             dx = (
                 pos_track[now_index][i][0] - pos_track[now_index - reflect_frames][i][0]
-            )
-            #! playerの検出される順番が変わることがあるから、おかしくなる。辞書型に変えるか、順番が固定されるようにすべき
+            )[0]
             dy = -1 * (
                 pos_track[now_index][i][1] - pos_track[now_index - reflect_frames][i][1]
-            )
+            )[0]
             print(f"dx: {dx}  | dy: {dy}")
             print("length", math.sqrt(dx**2 + dy**2))
-            if (math.sqrt(dx**2 + dy**2)) > 50:
+            if (math.sqrt(dx**2 + dy**2)) > 30:
                 if dx < 0:
                     if dy < 0:
                         gradient_rad = -math.pi - math.atan(
@@ -311,6 +310,7 @@ class MatchAnalyzer:
                 pos_xy_perspective_transformed = self.perspective_transform_position(
                     player_foot_pos_xy_list, M
                 )
+                #! 配列の順番が逆の方がいい
                 pos_track.append(pos_xy_perspective_transformed)
                 # TRACK_FRAMESまでしか追跡しない
                 if len(pos_track) > self.tracking_frames:
