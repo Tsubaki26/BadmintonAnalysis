@@ -94,7 +94,7 @@ class MatchAnalyzer:
             "s5_": [0, 0],
         }
         self.gradient_reflect_frames = 5
-        self.speed_reflect_frames = 2  # 15
+        self.speed_reflect_frames = 30  # 15
 
     def load_video(self, video_path):
         """
@@ -364,8 +364,8 @@ class MatchAnalyzer:
 
         while self.cap.isOpened():
             count += 1
-            if count > 600:
-                break
+            # if count > 600:
+            #     break
 
             # 進捗状況の表示
             if count % 100 == 0:
