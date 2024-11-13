@@ -69,6 +69,14 @@ class MatchAnalyzer:
         self.total_movement_track = [[0, 0]]
         self.time_track = [0]
         self.speed_track = [[0, 0]]
+        self.speed_hist = {
+            "s0_1": 0,
+            "s1_2": 0,
+            "s2_3": 0,
+            "s3_4": 0,
+            "s4_5": 0,
+            "s5_": 0,
+        }
 
     def load_video(self, video_path):
         """
@@ -261,6 +269,18 @@ class MatchAnalyzer:
             print(length)
             speed = length / dt
             speed_list[i] = speed
+            if speed < 1:
+                self.speed_hist["s0_1"] += 1
+            elif speed < 2:
+                self.speed_hist["s1_2"] += 1
+            elif speed < 3:
+                self.speed_hist["s2_3"] += 1
+            elif speed < 4:
+                self.speed_hist["s3_4"] += 1
+            elif speed < 5:
+                self.speed_hist["s4_5"] += 1
+            else:
+                self.speed_hist["s5_"] += 1
             print(f"player{i+1}'s speed: {speed}")
             now_x, now_y = int(pos_track[-1][i][0][0]), int(pos_track[-1][i][1][0] - 10)
             cv2.putText(
@@ -409,17 +429,19 @@ class MatchAnalyzer:
         )
         # player の位置プロット
         analysis.make_player_position_plot(
-            self.
-            court_img_for_output, output_path=f"./outputs/output{t}.jpg"
+            self.court_img_for_output, output_path=f"./outputs/plot{t}.jpg"
         )
         # 移動速度のグラフ
         analysis.make_speed_graph(
             self.time_track, self.speed_track, output_path=f"./outputs/speed{t}.jpg"
+        )
+        analysis.make_speed_hist(
+            self.speed_hist, output_path=f"./outputs/speed_hist{t}.jpg"
         )
 
 
 if __name__ == "__main__":
     analyzer = MatchAnalyzer()
     analyzer.analyze_match(
-        VIDEO_PATH, is_save_video=False, output_path=OUTPUT_VIDEO_PATH
+        VIDEO_PATH, is_save_video=True, output_path=OUTPUT_VIDEO_PATH
     )
