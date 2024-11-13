@@ -327,14 +327,14 @@ class MatchAnalyzer:
 
     def select_output_params(self):
         parameters = {}
-        parameters["court image size (w, h)" : self.court_size_wh]
-        parameters["fps" : self.fps]
-        parameters["tracking frames" : self.tracking_frames]
-        parameters["court middle" : self.court_middle]
-        parameters["number of frames" : self.num_frame]
-        parameters["cap size (w, h)" : [self.cap_width, self.cap_height]]
-        parameters["speed reflect frames" : self.speed_reflect_frames]
-        parameters["gradient reflect frames" : self.gradient_reflect_frames]
+        parameters["court image size (w, h)"] = self.court_size_wh
+        parameters["fps"] = self.fps
+        parameters["tracking frames"] = self.tracking_frames
+        parameters["court middle"] = self.court_middle
+        parameters["number of frames"] = self.num_frame
+        parameters["cap size (w, h)"] = [self.cap_width, self.cap_height]
+        parameters["speed reflect frames"] = self.speed_reflect_frames
+        parameters["gradient reflect frames"] = self.gradient_reflect_frames
         return parameters
 
     def analyze_match(

@@ -135,7 +135,7 @@ def make_parameters_text(parameters, output_path="./parameters.txt"):
     """
     text_file = open(output_path, "w")
     for param_name, value in parameters.items():
-        text_file.write(f"{param_name}: {value}")
+        text_file.write(f"{param_name}: {value}\n")
     text_file.close()
 
 
