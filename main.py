@@ -20,7 +20,6 @@ t = time.time()
 OUTPUT_VIDEO_PATH = f"./outputs/out{t}.mp4"
 
 
-
 COURT_WIDTH = 183 * 2
 COURT_HEIGHT = 402 * 2
 
@@ -40,6 +39,7 @@ class MatchAnalyzer:
         # コート画像の初期設定
         self.court_img_path = court_img_path
         self.court_size_wh = court_size_wh
+        self.court_actual_size_wh = [6.1, 13.4]  # メートル
         self.court_img = cv2.imread(self.court_img_path)
         self.court_img = cv2.resize(self.court_img, self.court_size_wh)
         self.court_img_for_output = self.court_img
@@ -47,6 +47,7 @@ class MatchAnalyzer:
         # 動画保存の初期設定
         self.is_save_video = False
         self.writer = None
+        self.fps = 30
 
         # player の位置ポインターの初期設定
         # self.tracking_frames = 20
@@ -66,6 +67,8 @@ class MatchAnalyzer:
         self.output_interval = self.tracking_frames
         self.total_movement = [0, 0]
         self.total_movement_track = [[0, 0]]
+        self.time_track = []
+        self.speed_track = [[0,0]]
 
     def load_video(self, video_path):
         """
@@ -88,7 +91,7 @@ class MatchAnalyzer:
         video_streams = [
             stream for stream in probe["streams"] if stream["codec_type"] == "video"
         ]
-        fps = int(eval(video_streams[0]["r_frame_rate"]))
+        self.fps = int(eval(video_streams[0]["r_frame_rate"]))
 
         self.writer = (
             ffmpeg.input(
@@ -96,7 +99,7 @@ class MatchAnalyzer:
                 format="rawvideo",
                 pix_fmt="rgb24",
                 s="{}x{}".format(img_width, img_height),
-                r=fps,
+                r=self.fps,
             )
             .output(output_path, pix_fmt="yuv420p")
             .overwrite_output()
@@ -197,18 +200,15 @@ class MatchAnalyzer:
         """
         gradient_rad = 0
         gradient_deg = 0
-        now_index = tracking_frames - 1
-        reflect_frames = 10
+        reflect_frames = 5
+        if len(pos_track) < reflect_frames:
+            return court_img, None
         for i in range(2):
-            dx = (
-                pos_track[now_index][i][0] - pos_track[now_index - reflect_frames][i][0]
-            )[0]
-            dy = -1 * (
-                pos_track[now_index][i][1] - pos_track[now_index - reflect_frames][i][1]
-            )[0]
-            print(f"dx: {dx}  | dy: {dy}")
-            print("length", math.sqrt(dx**2 + dy**2))
-            if (math.sqrt(dx**2 + dy**2)) > 30:
+            dx = (pos_track[-1][i][0] - pos_track[-reflect_frames][i][0])[0]
+            dy = -1 * (pos_track[-1][i][1] - pos_track[-reflect_frames][i][1])[0]
+            # print(f"dx: {dx}  | dy: {dy}")
+            # print("length", math.sqrt(dx**2 + dy**2))
+            if (math.sqrt(dx**2 + dy**2)) > 3 * reflect_frames:
                 if dx < 0:
                     if dy < 0:
                         gradient_rad = -math.pi - math.atan(
@@ -223,8 +223,8 @@ class MatchAnalyzer:
                     gradient_rad = math.atan(float(dy) / (float(dx) + 0.0001))
                     gradient_deg = gradient_rad * 180 / math.pi
                 print("gradient_deg", gradient_deg)
-                now_x, now_y = int(pos_track[now_index][i][0][0]), int(
-                    pos_track[now_index][i][1][0] - 10
+                now_x, now_y = int(pos_track[-1][i][0][0]), int(
+                    pos_track[-1][i][1][0] - 10
                 )
                 cv2.putText(
                     court_img,
@@ -236,6 +236,40 @@ class MatchAnalyzer:
                     2,
                 )
         return court_img, gradient_deg
+
+    def add_speed(self, court_img, pos_track, tracking_frames):
+        reflect_frames = 15
+        if len(pos_track) < reflect_frames:
+            return court_img
+        dt = reflect_frames / self.fps  # 秒
+        print(dt)
+        for i in range(2):
+            # 実際の長さを計算
+            dx = (
+                (pos_track[-1][i][0] - pos_track[-reflect_frames][i][0])[0]
+                / self.court_size_wh[0]
+                * self.court_actual_size_wh[0]
+            )
+            dy = (
+                (-1 * (pos_track[-1][i][1] - pos_track[-reflect_frames][i][1])[0])
+                / self.court_size_wh[0]
+                * self.court_actual_size_wh[0]
+            )
+            length = math.sqrt(dx**2 + dy**2)
+            print(length)
+            speed = length / dt
+            print(f"player{i+1}'s speed: {speed}")
+            now_x, now_y = int(pos_track[-1][i][0][0]), int(pos_track[-1][i][1][0] - 10)
+            cv2.putText(
+                court_img,
+                f"{speed:.1f}[m/s]",
+                (now_x - 10, now_y - 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (200, 200, 200),
+                2,
+            )
+        return court_img
 
     def analyze_match(
         self,
@@ -316,10 +350,13 @@ class MatchAnalyzer:
                 court_for_display, pos_track, track_size_list
             )
             # コート画像に移動の傾きを表示
-            if count >= self.tracking_frames:
-                court_for_display, gradient_deg = self.add_move_gradient(
-                    court_for_display, pos_track, self.tracking_frames
-                )
+            # court_for_display, gradient_deg = self.add_move_gradient(
+            #     court_for_display, pos_track, self.tracking_frames
+            # )
+            # コート画像に移動速度を表示
+            court_for_display = self.add_speed(
+                court_for_display, pos_track, self.tracking_frames
+            )
 
             # 動画とコート画像の合成（左上）
             img_for_display[
