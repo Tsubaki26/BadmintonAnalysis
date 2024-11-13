@@ -61,8 +61,8 @@ def make_total_movement_graph(
     plt.xlabel("frame (1/15)")
     plt.ylabel("total movement")
     plt.savefig(output_path)
-    plt.show()
-    plt.close()
+    # plt.show()
+    # plt.close()
 
 
 def make_speed_graph(time_track, speed_track, output_path="./speed_output.jpg"):
@@ -79,25 +79,53 @@ def make_speed_graph(time_track, speed_track, output_path="./speed_output.jpg"):
     plt.xlabel("time")
     plt.ylabel("speed")
     plt.savefig(output_path)
-    plt.show()
-    plt.close()
-    
-def make_speed_hist(speed_hist, output_path="./speed_output.jpg"):
-    y1 = []
-    y2 = []
-    for ys in speed_track:
-        y1.append(ys[0])
-        y2.append(ys[1])
+    # plt.show()
+    # plt.close()
 
-    plt.figure(figsize=(20, 5))
-    plt.plot(time_track, y1, label="player1")
-    plt.plot(time_track, y2, label="player2")
-    plt.legend()
-    plt.xlabel("time")
-    plt.ylabel("speed")
+
+def make_speed_bar(speed_range, output_path="./speed_bar_output.jpg"):
+    speed_classes = []
+    speed_values1 = []
+    speed_values2 = []
+
+    for i in range(len(speed_range)):
+        if i == len(speed_range) - 1:
+            speed_str = f"{i}-"
+        else:
+            speed_str = f"{i}-{i+1}"
+        speed_classes.append(speed_str)
+
+    x = np.arange(len(speed_range))
+    for key, value in speed_range.items():
+        speed_values1.append(value[0])
+        speed_values2.append(value[1])
+
+    fig, ax = plt.subplots()
+    width = 0.3
+    p1 = ax.bar(
+        x,
+        speed_values1,
+        width,
+        color="r",
+        label="player1",
+    )
+    p2 = ax.bar(
+        x + width,
+        speed_values2,
+        width,
+        color="b",
+        label="player2",
+    )
+    ax.bar_label(p1)
+    ax.bar_label(p2)
+    ax.legend()
+    ax.set_xticks(x + width / 2)
+    ax.set_xticklabels(tuple(speed_classes))
+    ax.set_xlabel("Speed range [m/s]")
+    ax.set_ylabel("Counts")
     plt.savefig(output_path)
-    plt.show()
-    plt.close()
+    # plt.show()
+    # plt.close()
 
 
 def make_player_position_plot(court_img_for_output, output_path="./court_output.jpg"):
