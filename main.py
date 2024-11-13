@@ -67,8 +67,8 @@ class MatchAnalyzer:
         self.output_interval = self.tracking_frames
         self.total_movement = [0, 0]
         self.total_movement_track = [[0, 0]]
-        self.time_track = []
-        self.speed_track = [[0,0]]
+        self.time_track = [0]
+        self.speed_track = [[0, 0]]
 
     def load_video(self, video_path):
         """
@@ -242,7 +242,9 @@ class MatchAnalyzer:
         if len(pos_track) < reflect_frames:
             return court_img
         dt = reflect_frames / self.fps  # 秒
+        self.time_track.append(self.time_track[-1] + dt)
         print(dt)
+        speed_list = [0, 0]
         for i in range(2):
             # 実際の長さを計算
             dx = (
@@ -258,6 +260,7 @@ class MatchAnalyzer:
             length = math.sqrt(dx**2 + dy**2)
             print(length)
             speed = length / dt
+            speed_list[i] = speed
             print(f"player{i+1}'s speed: {speed}")
             now_x, now_y = int(pos_track[-1][i][0][0]), int(pos_track[-1][i][1][0] - 10)
             cv2.putText(
@@ -269,6 +272,7 @@ class MatchAnalyzer:
                 (200, 200, 200),
                 2,
             )
+        self.speed_track.append(speed_list)
         return court_img
 
     def analyze_match(
@@ -350,9 +354,9 @@ class MatchAnalyzer:
                 court_for_display, pos_track, track_size_list
             )
             # コート画像に移動の傾きを表示
-            # court_for_display, gradient_deg = self.add_move_gradient(
-            #     court_for_display, pos_track, self.tracking_frames
-            # )
+            court_for_display, gradient_deg = self.add_move_gradient(
+                court_for_display, pos_track, self.tracking_frames
+            )
             # コート画像に移動速度を表示
             court_for_display = self.add_speed(
                 court_for_display, pos_track, self.tracking_frames
@@ -405,7 +409,12 @@ class MatchAnalyzer:
         )
         # player の位置プロット
         analysis.make_player_position_plot(
-            self.court_img_for_output, output_path=f"./outputs/output{t}.jpg"
+            self.
+            court_img_for_output, output_path=f"./outputs/output{t}.jpg"
+        )
+        # 移動速度のグラフ
+        analysis.make_speed_graph(
+            self.time_track, self.speed_track, output_path=f"./outputs/speed{t}.jpg"
         )
 
 

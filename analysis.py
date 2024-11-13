@@ -65,6 +65,23 @@ def make_total_movement_graph(
     plt.close()
 
 
+def make_speed_graph(time_track, speed_track, output_path="./speed_output.jpg"):
+    y1 = []
+    y2 = []
+    for ys in speed_track:
+        y1.append(ys[0])
+        y2.append(ys[1])
+
+    plt.plot(time_track, y1, label="player1")
+    plt.plot(time_track, y2, label="player2")
+    plt.legend()
+    plt.xlabel("time")
+    plt.ylabel("speed")
+    plt.savefig(output_path)
+    plt.show()
+    plt.close()
+
+
 def make_player_position_plot(court_img_for_output, output_path="./court_output.jpg"):
     # cv2.imshow("court", court_img_for_output)
     # cv2.waitKey()
