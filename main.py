@@ -229,7 +229,7 @@ class MatchAnalyzer:
                 cv2.putText(
                     court_img,
                     f"{gradient_deg:.1f}deg",
-                    (now_x - 10, now_y - 10),
+                    (now_x - 10, now_y - 35),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
                     (200, 200, 200),
@@ -266,7 +266,7 @@ class MatchAnalyzer:
             cv2.putText(
                 court_img,
                 f"{speed:.1f}[m/s]",
-                (now_x - 10, now_y - 20),
+                (now_x - 10, now_y - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
                 (200, 200, 200),
