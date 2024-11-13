@@ -128,6 +128,17 @@ def make_speed_bar(speed_range, output_path="./speed_bar_output.jpg"):
     # plt.close()
 
 
+def make_parameters_text(parameters, output_path="./parameters.txt"):
+    """
+    Arguments:
+        ・辞書型のパラメータリスト
+    """
+    text_file = open(output_path, "w")
+    for param_name, value in parameters.items():
+        text_file.write(f"{param_name}: {value}")
+    text_file.close()
+
+
 def make_player_position_plot(court_img_for_output, output_path="./court_output.jpg"):
     # cv2.imshow("court", court_img_for_output)
     # cv2.waitKey()

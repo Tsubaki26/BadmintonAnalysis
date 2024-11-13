@@ -28,11 +28,12 @@ try:
     print(f"ディレクトリを作成しました: {output_dir}")
 except OSError as error:
     print(f"ディレクトリ作成中にエラーが発生しました: {error}")
-OUTPUT_VIDEO_PATH = f"{output_dir}/video{t}.mp4"
-TOTAL_MOVEMENT_PATH = f"{output_dir}/total_movement{t}.jpg"
-PLAYER_POS_PLOT_PATH = f"{output_dir}/plot{t}.jpg"
-SPEED_GRAPH_PATH = f"{output_dir}/speed{t}.jpg"
-SPEED_BAR_PATH = f"{output_dir}/speed_bar{t}.jpg"
+OUTPUT_VIDEO_PATH = f"{output_dir}/video.mp4"
+TOTAL_MOVEMENT_PATH = f"{output_dir}/total_movement.jpg"
+PLAYER_POS_PLOT_PATH = f"{output_dir}/plot.jpg"
+SPEED_GRAPH_PATH = f"{output_dir}/speed.jpg"
+SPEED_BAR_PATH = f"{output_dir}/speed_bar.jpg"
+PARAMETERS_TEXT_PATH = f"{output_dir}/parameters.txt"
 
 
 COURT_WIDTH = 183 * 2
@@ -92,6 +93,8 @@ class MatchAnalyzer:
             "s4_5": [0, 0],
             "s5_": [0, 0],
         }
+        self.gradient_reflect_frames = 5
+        self.speed_reflect_frames = 2  # 15
 
     def load_video(self, video_path):
         """
@@ -223,15 +226,21 @@ class MatchAnalyzer:
         """
         gradient_rad = 0
         gradient_deg = 0
-        reflect_frames = 5
-        if len(pos_track) < reflect_frames:
+        if len(pos_track) < self.gradient_reflect_frames:
             return court_img, None
         for i in range(2):
-            dx = (pos_track[-1][i][0] - pos_track[-reflect_frames][i][0])[0]
-            dy = -1 * (pos_track[-1][i][1] - pos_track[-reflect_frames][i][1])[0]
+            dx = (pos_track[-1][i][0] - pos_track[-self.gradient_reflect_frames][i][0])[
+                0
+            ]
+            dy = (
+                -1
+                * (
+                    pos_track[-1][i][1] - pos_track[-self.gradient_reflect_frames][i][1]
+                )[0]
+            )
             # print(f"dx: {dx}  | dy: {dy}")
             # print("length", math.sqrt(dx**2 + dy**2))
-            if (math.sqrt(dx**2 + dy**2)) > 3 * reflect_frames:
+            if (math.sqrt(dx**2 + dy**2)) > 3 * self.gradient_reflect_frames:
                 if dx < 0:
                     if dy < 0:
                         gradient_rad = -math.pi - math.atan(
@@ -261,22 +270,28 @@ class MatchAnalyzer:
         return court_img, gradient_deg
 
     def add_speed(self, court_img, pos_track, tracking_frames):
-        reflect_frames = 15
-        if len(pos_track) < reflect_frames:
+        if len(pos_track) < self.speed_reflect_frames:
             return court_img
-        dt = reflect_frames / self.fps  # 秒
-        self.time_track.append(self.time_track[-1] + dt)
+        dt = self.speed_reflect_frames / self.fps  # 秒
+        self.time_track.append(self.time_track[-1] + 1 / self.fps)
+        # print(self.time_track)
         # print(dt)
         speed_list = [0, 0]
         for i in range(2):
             # 実際の長さを計算
             dx = (
-                (pos_track[-1][i][0] - pos_track[-reflect_frames][i][0])[0]
+                (pos_track[-1][i][0] - pos_track[-self.speed_reflect_frames][i][0])[0]
                 / self.court_size_wh[0]
                 * self.court_actual_size_wh[0]
             )
             dy = (
-                (-1 * (pos_track[-1][i][1] - pos_track[-reflect_frames][i][1])[0])
+                (
+                    -1
+                    * (
+                        pos_track[-1][i][1]
+                        - pos_track[-self.speed_reflect_frames][i][1]
+                    )[0]
+                )
                 / self.court_size_wh[0]
                 * self.court_actual_size_wh[0]
             )
@@ -310,6 +325,18 @@ class MatchAnalyzer:
         self.speed_track.append(speed_list)
         return court_img
 
+    def select_output_params(self):
+        parameters = {}
+        parameters["court image size (w, h)" : self.court_size_wh]
+        parameters["fps" : self.fps]
+        parameters["tracking frames" : self.tracking_frames]
+        parameters["court middle" : self.court_middle]
+        parameters["number of frames" : self.num_frame]
+        parameters["cap size (w, h)" : [self.cap_width, self.cap_height]]
+        parameters["speed reflect frames" : self.speed_reflect_frames]
+        parameters["gradient reflect frames" : self.gradient_reflect_frames]
+        return parameters
+
     def analyze_match(
         self,
         match_video_path,
@@ -337,7 +364,7 @@ class MatchAnalyzer:
 
         while self.cap.isOpened():
             count += 1
-            if count > 300:
+            if count > 600:
                 break
 
             # 進捗状況の表示
@@ -452,8 +479,9 @@ class MatchAnalyzer:
         analysis.make_speed_graph(
             self.time_track, self.speed_track, output_path=SPEED_GRAPH_PATH
         )
-        analysis.make_speed_bar(
-            self.speed_range, output_path=SPEED_BAR_PATH
+        analysis.make_speed_bar(self.speed_range, output_path=SPEED_BAR_PATH)
+        analysis.make_parameters_text(
+            parameters=self.select_output_params(), output_path=PARAMETERS_TEXT_PATH
         )
 
 
