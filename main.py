@@ -1,5 +1,6 @@
 import time
 import math
+import os
 
 import cv2
 import numpy as np
@@ -17,7 +18,21 @@ VIDEO_PATH = "./videos/cutversion2.mp4"
 COURT_IMG_PATH = "./img//court_vertical_black.jpg"
 
 t = time.time()
-OUTPUT_VIDEO_PATH = f"./outputs/out{t}.mp4"
+# タイムスタンプをフォーマット
+timestamp = time.strftime("%y%m%d_%H_%M_%S", time.localtime(t))
+# ディレクトリパスを作成
+output_dir = f"./outputs/{timestamp}"
+# ディレクトリを作成
+try:
+    os.makedirs(output_dir)
+    print(f"ディレクトリを作成しました: {output_dir}")
+except OSError as error:
+    print(f"ディレクトリ作成中にエラーが発生しました: {error}")
+OUTPUT_VIDEO_PATH = f"{output_dir}/video{t}.mp4"
+TOTAL_MOVEMENT_PATH = f"{output_dir}/total_movement{t}.jpg"
+PLAYER_POS_PLOT_PATH = f"{output_dir}/plot{t}.jpg"
+SPEED_GRAPH_PATH = f"{output_dir}/speed{t}.jpg"
+SPEED_BAR_PATH = f"{output_dir}/speed_bar{t}.jpg"
 
 
 COURT_WIDTH = 183 * 2
@@ -69,13 +84,13 @@ class MatchAnalyzer:
         self.total_movement_track = [[0, 0]]
         self.time_track = [0]
         self.speed_track = [[0, 0]]
-        self.speed_hist = {
-            "s0_1": 0,
-            "s1_2": 0,
-            "s2_3": 0,
-            "s3_4": 0,
-            "s4_5": 0,
-            "s5_": 0,
+        self.speed_range = {
+            "s0_1": [0, 0],
+            "s1_2": [0, 0],
+            "s2_3": [0, 0],
+            "s3_4": [0, 0],
+            "s4_5": [0, 0],
+            "s5_": [0, 0],
         }
 
     def load_video(self, video_path):
@@ -230,7 +245,7 @@ class MatchAnalyzer:
                 else:
                     gradient_rad = math.atan(float(dy) / (float(dx) + 0.0001))
                     gradient_deg = gradient_rad * 180 / math.pi
-                print("gradient_deg", gradient_deg)
+                # print("gradient_deg", gradient_deg)
                 now_x, now_y = int(pos_track[-1][i][0][0]), int(
                     pos_track[-1][i][1][0] - 10
                 )
@@ -251,7 +266,7 @@ class MatchAnalyzer:
             return court_img
         dt = reflect_frames / self.fps  # 秒
         self.time_track.append(self.time_track[-1] + dt)
-        print(dt)
+        # print(dt)
         speed_list = [0, 0]
         for i in range(2):
             # 実際の長さを計算
@@ -266,22 +281,22 @@ class MatchAnalyzer:
                 * self.court_actual_size_wh[0]
             )
             length = math.sqrt(dx**2 + dy**2)
-            print(length)
+            # print(length)
             speed = length / dt
             speed_list[i] = speed
             if speed < 1:
-                self.speed_hist["s0_1"] += 1
+                self.speed_range["s0_1"][i] += 1
             elif speed < 2:
-                self.speed_hist["s1_2"] += 1
+                self.speed_range["s1_2"][i] += 1
             elif speed < 3:
-                self.speed_hist["s2_3"] += 1
+                self.speed_range["s2_3"][i] += 1
             elif speed < 4:
-                self.speed_hist["s3_4"] += 1
+                self.speed_range["s3_4"][i] += 1
             elif speed < 5:
-                self.speed_hist["s4_5"] += 1
+                self.speed_range["s4_5"][i] += 1
             else:
-                self.speed_hist["s5_"] += 1
-            print(f"player{i+1}'s speed: {speed}")
+                self.speed_range["s5_"][i] += 1
+            # print(f"player{i+1}'s speed: {speed}")
             now_x, now_y = int(pos_track[-1][i][0][0]), int(pos_track[-1][i][1][0] - 10)
             cv2.putText(
                 court_img,
@@ -322,6 +337,8 @@ class MatchAnalyzer:
 
         while self.cap.isOpened():
             count += 1
+            if count > 300:
+                break
 
             # 進捗状況の表示
             if count % 100 == 0:
@@ -425,18 +442,18 @@ class MatchAnalyzer:
 
         # 総移動距離のグラフ
         analysis.make_total_movement_graph(
-            self.total_movement_track, output_path=f"./outputs/total_movement{t}.jpg"
+            self.total_movement_track, output_path=TOTAL_MOVEMENT_PATH
         )
         # player の位置プロット
         analysis.make_player_position_plot(
-            self.court_img_for_output, output_path=f"./outputs/plot{t}.jpg"
+            self.court_img_for_output, output_path=PLAYER_POS_PLOT_PATH
         )
         # 移動速度のグラフ
         analysis.make_speed_graph(
-            self.time_track, self.speed_track, output_path=f"./outputs/speed{t}.jpg"
+            self.time_track, self.speed_track, output_path=SPEED_GRAPH_PATH
         )
-        analysis.make_speed_hist(
-            self.speed_hist, output_path=f"./outputs/speed_hist{t}.jpg"
+        analysis.make_speed_bar(
+            self.speed_range, output_path=SPEED_BAR_PATH
         )
 
 
