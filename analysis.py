@@ -68,13 +68,16 @@ def make_total_movement_graph(
 def make_speed_graph(time_track, speed_track, output_path="./speed_output.jpg"):
     y1 = []
     y2 = []
+    y3 = []
     for ys in speed_track:
         y1.append(ys[0])
         y2.append(ys[1])
+        y3.append(ys[0] + ys[1])
 
     plt.figure(figsize=(20, 5))
     plt.plot(time_track, y1, label="player1")
     plt.plot(time_track, y2, label="player2")
+    plt.plot(time_track, y3, label="player1+2")
     plt.legend()
     plt.xlabel("time")
     plt.ylabel("speed")
