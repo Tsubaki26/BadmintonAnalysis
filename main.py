@@ -14,8 +14,8 @@ from detection import Detection
 # VIDEO_PATH = "./videos/cutvirsion.mp4"
 # VIDEO_PATH = "./videos/cutversion_nopeople.mp4"
 VIDEO_PATH = "./videos/cutversion2.mp4"
-COURT_IMG_PATH = "./img//court_vertical.jpg"
-# COURT_IMG_PATH = "./img//court_vertical_black.jpg"
+# COURT_IMG_PATH = "./img//court_vertical.jpg"
+COURT_IMG_PATH = "./img//court_vertical_black.jpg"
 
 t = time.time()
 # タイムスタンプをフォーマット
