@@ -14,8 +14,8 @@ from detection import Detection
 # VIDEO_PATH = "./videos/cutvirsion.mp4"
 # VIDEO_PATH = "./videos/cutversion_nopeople.mp4"
 VIDEO_PATH = "./videos/cutversion2.mp4"
-# COURT_IMG_PATH = "./img//court_vertical.jpg"
-COURT_IMG_PATH = "./img//court_vertical_black.jpg"
+COURT_IMG_PATH = "./img//court_vertical.jpg"
+# COURT_IMG_PATH = "./img//court_vertical_black.jpg"
 
 t = time.time()
 # タイムスタンプをフォーマット
@@ -94,7 +94,7 @@ class MatchAnalyzer:
             "s5_": [0, 0],
         }
         self.gradient_reflect_frames = 5
-        self.speed_reflect_frames = 30  # 15
+        self.speed_reflect_frames = 60  # 15
 
     def load_video(self, video_path):
         """
@@ -220,14 +220,15 @@ class MatchAnalyzer:
                 )
         return court_img
 
-    def add_move_gradient(self, court_img, pos_track, tracking_frames):
+    def add_move_gradient(self, court_img, pos_track, court_middle):
         """
         移動の傾きを計算
         """
         gradient_rad = 0
         gradient_deg = 0
+        gradient_rad_list = [0, 0]  # player1, player2
         if len(pos_track) < self.gradient_reflect_frames:
-            return court_img, None
+            return court_img, gradient_rad_list
         for i in range(2):
             dx = (pos_track[-1][i][0] - pos_track[-self.gradient_reflect_frames][i][0])[
                 0
@@ -258,6 +259,10 @@ class MatchAnalyzer:
                 now_x, now_y = int(pos_track[-1][i][0][0]), int(
                     pos_track[-1][i][1][0] - 10
                 )
+                if now_y > court_middle:
+                    gradient_rad_list[0] = gradient_rad
+                else:
+                    gradient_rad_list[1] = gradient_rad
                 cv2.putText(
                     court_img,
                     f"{gradient_deg:.1f}deg",
@@ -267,11 +272,11 @@ class MatchAnalyzer:
                     (200, 200, 200),
                     2,
                 )
-        return court_img, gradient_deg
+        return court_img, gradient_rad_list
 
-    def add_speed(self, court_img, pos_track, tracking_frames):
+    def add_speed(self, court_img, pos_track):
         if len(pos_track) < self.speed_reflect_frames:
-            return court_img
+            return court_img, [0, 0]
         dt = self.speed_reflect_frames / self.fps  # 秒
         self.time_track.append(self.time_track[-1] + 1 / self.fps)
         # print(self.time_track)
@@ -323,7 +328,7 @@ class MatchAnalyzer:
                 2,
             )
         self.speed_track.append(speed_list)
-        return court_img
+        return court_img, speed_list
 
     def select_output_params(self):
         parameters = {}
@@ -361,6 +366,9 @@ class MatchAnalyzer:
         # player ポインターの追跡用配列
         pos_track = []
         track_size_list = self.make_point_size_list()
+
+        slow_count = 0
+        is_playing = False
 
         while self.cap.isOpened():
             count += 1
@@ -418,14 +426,57 @@ class MatchAnalyzer:
                 court_for_display, pos_track, track_size_list
             )
             # コート画像に移動の傾きを表示
-            court_for_display, gradient_deg = self.add_move_gradient(
-                court_for_display, pos_track, self.tracking_frames
+            court_for_display, gradient_rad_list = self.add_move_gradient(
+                court_for_display, pos_track, self.court_middle
             )
             # コート画像に移動速度を表示
-            court_for_display = self.add_speed(
-                court_for_display, pos_track, self.tracking_frames
-            )
+            court_for_display, speed_list = self.add_speed(court_for_display, pos_track)
+            # playerの右に速度バーの表示
+            for i, pos_xy in enumerate(player_foot_pos_xy_list):
+                x = pos_xy[0] + 30
+                y = pos_xy[1]
+                speed_bar_width = 20
+                img_for_display = cv2.rectangle(
+                    img_for_display,
+                    pt1=(x, y - int(speed_list[i] * 30)),
+                    pt2=(x + speed_bar_width, y),
+                    color=(114, 128, 250),
+                    thickness=-1,
+                )
+                img_for_display = cv2.putText(
+                    img_for_display,
+                    f"{speed_list[i]:.2f}m/s",
+                    (x + speed_bar_width, y),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (238, 245, 255),
+                    2,
+                )
+                # プレイ中かどうか判定
+                # is_slow = (speed_list[0] < 1.3) and (speed_list[1] < 1.3)
+                is_slow = speed_list[0] + speed_list[1] < 2.0
+                if is_slow:
+                    slow_count += 1
+                else:
+                    slow_count = 0
+                # 数秒間ゆっくり
+                second = 3
+                if slow_count > self.fps * second:
+                    is_playing = False
+                    color_playing = (0, 0, 255)
+                else:
+                    is_playing = True
+                    color_playing = (0, 255, 0)
 
+                img_for_display = cv2.putText(
+                    img_for_display,
+                    f"is playing: {is_playing}",
+                    (self.cap_width // 2, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1.5,
+                    color_playing,
+                    2,
+                )
             # 動画とコート画像の合成（左上）
             img_for_display[
                 50 : 50 + self.court_size_wh[1], 50 : 50 + self.court_size_wh[0]
@@ -488,5 +539,5 @@ class MatchAnalyzer:
 if __name__ == "__main__":
     analyzer = MatchAnalyzer()
     analyzer.analyze_match(
-        VIDEO_PATH, is_save_video=True, output_path=OUTPUT_VIDEO_PATH
+        VIDEO_PATH, is_save_video=False, output_path=OUTPUT_VIDEO_PATH
     )
