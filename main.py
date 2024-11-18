@@ -94,7 +94,7 @@ class MatchAnalyzer:
             "s5_": [0, 0],
         }
         self.gradient_reflect_frames = 5
-        self.speed_reflect_frames = 60  # 15
+        self.speed_reflect_frames = 30  # 15
 
     def load_video(self, video_path):
         """
