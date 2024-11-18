@@ -3,3 +3,4 @@ __pycache__
 *.png
 *.mp4
 outputs
+experiment.py
