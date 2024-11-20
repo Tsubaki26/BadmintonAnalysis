@@ -14,6 +14,7 @@ from detection import Detection
 # VIDEO_PATH = "./videos/cutvirsion.mp4"
 # VIDEO_PATH = "./videos/cutversion_nopeople.mp4"
 VIDEO_PATH = "./videos/cutversion2.mp4"
+# VIDEO_PATH = "./videos/match2_cutvirsion.mp4"
 # COURT_IMG_PATH = "./img//court_vertical.jpg"
 COURT_IMG_PATH = "./img//court_vertical_black.jpg"
 
@@ -46,6 +47,12 @@ COURT_XY_BEFORE_WARP = [
     [1518, 997],
     [393, 988],
 ]
+# COURT_XY_BEFORE_WARP = [
+#     [14, 581],
+#     [775, 546],
+#     [1920, 913],
+#     [561, 1080],
+# ]
 
 
 class MatchAnalyzer:
@@ -77,7 +84,9 @@ class MatchAnalyzer:
         self.ylimit = [372, 1080]
 
         # 動画中のコートの中心の高さ
-        self.court_middle = 617
+        self.court_middle = 258
+        # コートの中心線 左と右の座標
+        self.court_middle_points = [[559, 608], [1368, 615]]
 
         # 解析結果の出力用変数の初期設定
         self.output_interval = self.tracking_frames
@@ -241,7 +250,9 @@ class MatchAnalyzer:
             )
             # print(f"dx: {dx}  | dy: {dy}")
             # print("length", math.sqrt(dx**2 + dy**2))
-            if (math.sqrt(dx**2 + dy**2)) > 3 * self.gradient_reflect_frames:
+            threshold = 3 * self.gradient_reflect_frames
+            threshold = 0
+            if (math.sqrt(dx**2 + dy**2)) > threshold:
                 if dx < 0:
                     if dy < 0:
                         gradient_rad = -math.pi - math.atan(
@@ -335,7 +346,7 @@ class MatchAnalyzer:
         parameters["court image size (w, h)"] = self.court_size_wh
         parameters["fps"] = self.fps
         parameters["tracking frames"] = self.tracking_frames
-        parameters["court middle"] = self.court_middle
+        # parameters["court middle"] = self.court_middle
         parameters["number of frames"] = self.num_frame
         parameters["cap size (w, h)"] = [self.cap_width, self.cap_height]
         parameters["speed reflect frames"] = self.speed_reflect_frames
@@ -396,7 +407,8 @@ class MatchAnalyzer:
                 img_for_display,
                 self.xlimit,
                 self.ylimit,
-                self.court_middle,
+                # self.court_middle,
+                self.court_middle_points,
             )
 
             """
@@ -429,6 +441,40 @@ class MatchAnalyzer:
             court_for_display, gradient_rad_list = self.add_move_gradient(
                 court_for_display, pos_track, self.court_middle
             )
+            #傾きの可視化
+            # for p in range(2):
+            #     if gradient_rad_list[p] == 0:
+            #         cv2.circle(
+            #             img_for_display,
+            #             (1000, -400 * p + 800),
+            #             5,
+            #             (255, 255, 0),
+            #             thickness=-1,
+            #         )
+            #     else:
+            #         dx = (
+            #             pos_track[-1][p][0]
+            #             - pos_track[-self.gradient_reflect_frames][p][0]
+            #         )[0]
+            #         dy = (
+            #             -1
+            #             * (
+            #                 pos_track[-1][p][1]
+            #                 - pos_track[-self.gradient_reflect_frames][p][1]
+            #             )[0]
+            #         )
+            #         length = math.sqrt(dx**2 + dy**2)
+            #         cv2.arrowedLine(
+            #             img_for_display,
+            #             (1000, -400 * p + 800),
+            #             (
+            #                 1000 + int(5 * length * math.cos(gradient_rad_list[p])),
+            #                 -400 * p + 800
+            #                 + int(-5 * length * math.sin(gradient_rad_list[p])),
+            #             ),
+            #             (255, 255, 0),
+            #             thickness=4,
+            #         )
             # コート画像に移動速度を表示
             court_for_display, speed_list = self.add_speed(court_for_display, pos_track)
             # playerの右に速度バーの表示
