@@ -15,7 +15,7 @@ class Detection:
         warnings.filterwarnings("ignore", category=FutureWarning)
 
     def detect_player(
-        self, img, video_size, img_for_display, xlimit, ylimit, court_middle
+        self, img, video_size, img_for_display, xlimit, ylimit, court_middle_points
     ):
         """
         playerの検出
@@ -47,7 +47,7 @@ class Detection:
                 if i == 0:
                     y2_0 = y2
                     player_foot_pos_xy_list.append([x1 + (x2 - x1) // 2, y2, 1])
-                elif i==1:
+                elif i == 1:
                     if y2 < y2_0:
                         player_foot_pos_xy_list.append([x1 + (x2 - x1) // 2, y2, 1])
                     else:
@@ -58,10 +58,11 @@ class Detection:
                 ・動画のフレームに加算して半透明を再現。
                 """
                 ellipse_add = np.uint8(np.zeros((video_size[1], video_size[0], 3)))
+                x_center = x1 + (x2 - x1) // 2
                 cv2.ellipse(
                     ellipse_add,
                     (
-                        (x1 + (x2 - x1) // 2, y2),
+                        (x_center, y2),
                         (x2 - x1, 30),  # 横直径、縦直径
                         0,
                     ),
@@ -74,30 +75,18 @@ class Detection:
                 playerの名前の表示
                 ・とりあえず下を player1 としている。
                 """
-                padding = [30, 15, 40, 40]  # top, bottom, left, right
-                if y2 < court_middle:
+                # コートの中心線の係数
+                a = (
+                    -1
+                    * (court_middle_points[1][1] - court_middle_points[0][1])
+                    / (court_middle_points[1][0] - court_middle_points[0][0])
+                )
+                # コートの中心線の切片
+                b = court_middle_points[1][1] - a * court_middle_points[1][0]
+                if y2 < a * x_center + b:
                     player_name = "player2"
-                    # playerのクリップ
-                    # player2_clip = img[
-                    #     y1 - padding[0] : y2 + padding[1],
-                    #     x1 - padding[2] : x2 + padding[3],
-                    # ]
-                    # player2_clip = cv2.resize(
-                    #     player2_clip,
-                    #     (player2_clip.shape[1] * 2, player2_clip.shape[0] * 2),
-                    # )
-                    # print(player2_clip.shape)
                 else:
                     player_name = "player1"
-                    # playerのクリップ
-                    # player1_clip = img[
-                    #     y1 - padding[0] : y2 + padding[1],
-                    #     x1 - padding[2] : x2 + padding[3],
-                    # ]
-                    # player1_clip = cv2.resize(
-                    #     player1_clip,
-                    #     (player1_clip.shape[1] * 2, player1_clip.shape[0] * 2),
-                    # )
                 cv2.putText(
                     img_for_display,
                     f"{player_name} {conf:.2f}",
