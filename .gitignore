@@ -1,6 +1,5 @@
 __pycache__
-*.jpg
-*.png
-*.mp4
+img
+videos
 outputs
 experiment.py
